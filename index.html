@@ -1,0 +1,153 @@
+<button id=js-discord-button>Login with Discord</button> <span id=js-discord-status> <div class=discord-card id=js-discord-card style=display:none> <img class=discord-card--image id=js-discord-card--image> <div class=discord-card--username id=js-discord-card--username></div> </div> <script> const clientID = "798950274114781204";
+
+const redirectUri = "https://charlie-moomoo.github.io/cow-login";
+
+const scope = "identify email"
+
+function handleClick() {
+
+   document.location.href = `https://discord.com/api/oauth2/authorize?client_id=${clientID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}`;
+
+}
+
+window.addEventListener('load', function() {
+
+   document.getElementById("js-discord-button").addEventListener("click", handleClick);
+
+   // 1. get code from url params
+
+   const urlParams = new URLSearchParams(window.location.search);
+
+   if(urlParams.has("code")) { 
+
+     // 2. post code to get token
+
+     const clientSecret = "3c-TeN5NxElL4la8E6h5BlT4zDHigser";
+
+     const apiUrl = 'https://discordapp.com/api/oauth2/token'
+
+     const data = {
+
+        'client_id': clientID,
+
+        'client_secret': clientSecret,
+
+        'grant_type': 'authorization_code',
+
+        'code': urlParams.get("code"),
+
+        'redirect_uri': redirectUri,
+
+        'scope': scope
+
+     }
+
+     // put payload together
+
+     const formBody = 
+
+     Object.keys(data)
+
+     .map(key => encodeURIComponent(key) 
+
+       + '=' 
+
+       + encodeURIComponent(data[key]))
+
+     .join('&');
+
+     // send post
+
+     const resultData = fetch(apiUrl, {
+
+        method: "POST",
+
+        headers: {
+
+           "content-type": "application/x-www-form-urlencoded"
+
+        },
+
+        body: formBody,
+
+     })
+
+     .then(function(response) {
+
+        if( !response.ok ) {
+
+           throw new Error(response.statusText)
+
+        }
+
+        document.getElementById("js-discord-status").innerText = "token got";
+
+        return response.json()
+
+     })
+
+     // 3. get user data
+
+     .then(function(data) {
+
+        let accessToken = data.access_token;
+
+        const userApiUrl = 'https://discordapp.com/api/users/@me';
+
+        return fetch(userApiUrl, {
+
+           method: "GET",
+
+           headers: {
+
+              "authorization": "Bearer " + accessToken,
+
+           }
+
+        })
+
+     })
+
+     .then(function(response) {
+
+        if( !response.ok ) {
+
+           throw new Error(response.statusText)
+
+        }
+
+        document.getElementById("js-discord-status").innerText = "user data got";
+
+        return response.json();
+
+     })
+
+     .catch(function(error) {
+
+        document.getElementById("js-discord-status").innerText = error;
+
+     })
+
+     // 4. display user data
+
+     resultData.then(function(r) {
+
+        if(r != undefined){
+
+          document.getElementById("js-discord-card").style.display="block";
+
+          document.getElementById("js-discord-card--image").src=`https://cdn.discordapp.com/avatars/${r.id}/${r.avatar}`;
+
+          document.getElementById("js-discord-card--username").innerText=`${r.username}#${r.discriminator}`
+
+        }
+
+     })
+
+   } else {
+
+      document.getElementById("js-discord-status").innerText = "Not logged in";
+
+   }
+
+}) </script>
